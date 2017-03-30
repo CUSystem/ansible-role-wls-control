@@ -1,0 +1,68 @@
+#
+## These are designed to be parameterized by Ansible
+#
+
+import sys
+
+weblogic_username =  '{{ weblogic_username }}'
+weblogic_password =  '{{ weblogic_password }}'
+weblogic_admin_url = '{{ weblogic_admin_url }}'
+file_store_name =    '{{ item.key }}'
+file_store_path =    '{{ item.value.path }}'
+file_store_targets = {{ item.value.target }}
+file_store_state =   '{{ item.value.state | default('present')}}'
+
+def build_target_array(target_array):
+  targets_array = []
+  for k,v in target_array.iteritems():
+    if v['type'] == 'Server':
+      server_bean = lookup_server(k,v['migratable'])
+      if server_bean is not None:
+        targets_array.append(server_bean)
+    else:
+      cluster_bean = cmo.lookupCluster(k)
+      if cluster_bean is not None:
+        targets_array.append(cluster_bean)
+  return targets_array
+
+def lookup_server(server_name, is_migratable = True):
+  if is_migratable:
+    #Migratable assumes a naming convention!
+    server_bean = cmo.lookupMigratableTarget(server_name+" (migratable)")
+  else:
+    server_bean = cmo.lookupServer(server_name)
+  return server_bean
+
+def create_file_store():
+  file_store = cmo.lookupFileStore(file_store_name)  
+  if file_store is None:  
+    #Doesn't exist. Create it.
+    file_store = cmo.createFileStore(file_store_name);
+
+  file_store.setDirectory(file_store_path);  
+
+  #targets requires a list
+  targets_array = build_target_array(file_store_targets)
+  file_store.setTargets(targets_array);  
+
+def delete_file_store():
+  file_store = cmo.lookupFileStore(file_store_name)  
+  if file_store is not None:
+    delete(file_store_name,'FileStore')
+
+##########################
+
+connect(weblogic_username,weblogic_password,weblogic_admin_url)
+
+edit()
+startEdit()
+
+if file_store_state == 'absent':
+  delete_file_store()
+else:
+  create_file_store()
+
+save()
+activate()
+
+exit()

@@ -1,0 +1,33 @@
+---
+
+# a place to drop start and stop scripts
+- name: ensure scripts folder exists
+  file:
+    path:  "{{ scripts_home }}"
+    state: directory
+    owner: "{{ oracle_user }}" 
+    group: "{{ oracle_group }}"
+    mode:  0700
+
+- fail: msg="Cannot find a dictionary variable 'file_stores'."
+  when: file_stores is not defined
+
+- name: template over the scripts
+  template: 
+    src:   wls_file_store.py.j2
+    dest:  "{{ scripts_home }}/wls_file_store-{{ item.key }}.py" 
+    owner: "{{ oracle_user }}" 
+    group: "{{ oracle_group }}" 
+    mode:  0700
+  with_dict: "{{ file_stores }}"
+
+- name: execute the scripts
+  command: "{{ wlst_executable }} {{ scripts_home }}/wls_file_store-{{ item.key }}.py"
+  with_dict: "{{ file_stores }}"
+
+- name: clean up scripts
+  file:
+    path: "{{ scripts_home }}/wls_file_store-{{ item.key }}.py"
+    state: absent
+  with_dict: "{{ file_stores }}"
+  when: clean_up_scripts == True

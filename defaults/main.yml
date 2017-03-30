@@ -3,7 +3,8 @@
 oracle_user: oracle
 oracle_group: oinstall 
 java_home: /usr/java/default
-weblogic_user: weblogic
+weblogic_username: weblogic
+
 oracle_base: /opt/oracle
 domain_base: /home/oracle
 mw_home: "{{ oracle_base }}/middleware"
@@ -16,5 +17,7 @@ domain_home: "{{ domain_base }}/user_projects/domains/{{ domain_name }}"
 
 identity_keystore_path: "{{ oracle_base }}/certs"
 identity_keystore_file: "{{ identity_keystore_path }}/identity.jks"
+
+clean_up_scripts: yes
 
 
