@@ -4,13 +4,8 @@
 
 import sys
 
-weblogic_username =  '{{ weblogic_username }}'
-weblogic_password =  '{{ weblogic_password }}'
-weblogic_admin_url = '{{ weblogic_admin_url }}'
-file_store_name =    '{{ item.key }}'
-file_store_path =    '{{ item.value.path }}'
-file_store_targets = {{ item.value.target }}
-file_store_state =   '{{ item.value.state | default('present')}}'
+name =    '{{ item.key }}'
+targets = {{ item.value.target }}
 
 def build_target_array(target_array):
   targets_array = []
@@ -34,30 +29,30 @@ def lookup_server(server_name, is_migratable = True):
   return server_bean
 
 def create_file_store():
-  file_store = cmo.lookupFileStore(file_store_name)  
+  file_store = cmo.lookupFileStore(name)  
   if file_store is None:  
     #Doesn't exist. Create it.
-    file_store = cmo.createFileStore(file_store_name);
+    file_store = cmo.createFileStore(name);
 
-  file_store.setDirectory(file_store_path);  
+  file_store.setDirectory('{{ item.value.path }}');  
 
   #targets requires a list
-  targets_array = build_target_array(file_store_targets)
+  targets_array = build_target_array(targets)
   file_store.setTargets(targets_array);  
 
 def delete_file_store():
-  file_store = cmo.lookupFileStore(file_store_name)  
+  file_store = cmo.lookupFileStore(name)  
   if file_store is not None:
-    delete(file_store_name,'FileStore')
+    delete(name,'FileStore')
 
 ##########################
 
-connect(weblogic_username,weblogic_password,weblogic_admin_url)
+connect('{{ weblogic_username }}','{{ weblogic_password }}','{{ weblogic_admin_url }}')
 
 edit()
 startEdit()
 
-if file_store_state == 'absent':
+if '{{ item.value.state | default('present') }}' == 'absent':
   delete_file_store()
 else:
   create_file_store()
@@ -65,4 +60,5 @@ else:
 save()
 activate()
 
+disconnect()
 exit()

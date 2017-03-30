@@ -1,5 +1,7 @@
 ---
 
+- debug: msg="HELLO!"
+
 # a place to drop start and stop scripts
 - name: ensure 
   file:

@@ -1,0 +1,71 @@
+#
+## These are designed to be parameterized by Ansible
+#
+
+import sys
+
+name =                   '{{ item.key }}'
+targets =                {{ item.value.target }}
+
+def build_target_array(target_array):
+  targets_array = []
+  for k,v in target_array.iteritems():
+    if v['type'] == 'Server':
+      server_bean = lookup_server(k,v['migratable'])
+      if server_bean is not None:
+        targets_array.append(server_bean)
+    else:
+      cluster_bean = cmo.lookupCluster(k)
+      if cluster_bean is not None:
+        targets_array.append(cluster_bean)
+  return targets_array
+
+def lookup_server(server_name, is_migratable = True):
+  if is_migratable:
+    #Migratable assumes a naming convention!
+    server_bean = cmo.lookupMigratableTarget(server_name+" (migratable)")
+  else:
+    server_bean = cmo.lookupServer(server_name)
+  return server_bean
+
+def create_jms_server():
+  jms_server = cmo.lookupJMSServer(name)  
+  if jms_server is None:  
+    #Doesn't exist. Create it.
+    jms_server = cmo.createJMSServer(name);
+
+  jms_server.setPersistentStore(getMBean('/FileStores/{{ item.value.store }}'))
+  jms_server.setBytesThresholdHigh({{ item.value.bytes_threshold_high | default(-1) }})
+  jms_server.setBytesThresholdLow({{ item.value.bytes_threshold_low | default(-1) }})
+  jms_server.setMessagesThresholdHigh({{ item.value.messages_threshold_high | default(-1) }})
+  jms_server.setMessagesThresholdLow({{ item.value.messages_threshold_low | default(-1) }})
+  jms_server.setBytesMaximum({{ item.value.bytes_maximum | default(-1) }})
+  jms_server.setMessagesMaximum({{ item.value.messages_maximum | default(-1) }})
+  jms_server.setMaximumMessageSize({{ item.value.maximum_message_size | default(2147483647) }})
+
+  #targets requires a list
+  targets_array = build_target_array(targets)
+  jms_server.setTargets(targets_array);  
+
+def delete_jms_server():
+  jms_server = cmo.lookupJMSServer(name)  
+  if jms_server is not None:
+    delete(name,'JMSServer')
+
+##########################
+
+connect('{{ weblogic_username }}','{{ weblogic_password }}','{{ weblogic_admin_url }}')
+
+edit()
+startEdit()
+
+if '{{ item.value.state | default('present') }}' == 'absent':
+  delete_jms_server()
+else:
+  create_jms_server()
+
+save()
+activate()
+
+disconnect()
+exit()
